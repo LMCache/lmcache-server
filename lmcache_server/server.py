@@ -38,9 +38,9 @@ class LMCacheServer:
                         t1 = time.perf_counter()
                         self.data_store[meta.key] = s
                         t2 = time.perf_counter()
-                        client_socket.sendall(ServerMetaMessage(Constants.SERVER_SUCCESS, 0).serialize())
-                        t3 = time.perf_counter()
-                        print(f"Time to receive data: {t1 - t0}, time to store data: {t2 - t1}, time to send meta: {t3 - t2}")
+                        #client_socket.sendall(ServerMetaMessage(Constants.SERVER_SUCCESS, 0).serialize())
+                        #t3 = time.perf_counter()
+                        print(f"Time to receive data: {t1 - t0}, time to store data: {t2 - t1}")
 
                     case Constants.CLIENT_GET:
                         t0 = time.perf_counter()
