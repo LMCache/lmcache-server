@@ -4,12 +4,14 @@ import threading
 import torch
 from io import BytesIO
 from lmcache.protocol import ClientMetaMessage, ServerMetaMessage, Constants
+from lmcache_server.storage_backend import CreateStorageBackend
 
 class LMCacheServer:
-    def __init__(self, host, port):
+    def __init__(self, host, port, device):
         self.host = host
         self.port = port
-        self.data_store = {}
+        #self.data_store = {}
+        self.data_store = CreateStorageBackend(device)
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.bind((host, port))
         self.server_socket.listen()
@@ -36,7 +38,8 @@ class LMCacheServer:
                         t0 = time.perf_counter()
                         s = self.receive_all(client_socket, meta.length)
                         t1 = time.perf_counter()
-                        self.data_store[meta.key] = s
+                        #self.data_store[meta.key] = s
+                        self.data_store.put(meta.key, s)
                         t2 = time.perf_counter()
                         #client_socket.sendall(ServerMetaMessage(Constants.SERVER_SUCCESS, 0).serialize())
                         #t3 = time.perf_counter()
@@ -44,7 +47,8 @@ class LMCacheServer:
 
                     case Constants.CLIENT_GET:
                         t0 = time.perf_counter()
-                        data_string = self.data_store.get(meta.key, None)
+                        #data_string = self.data_store.get(meta.key, None)
+                        data_string = self.data_store.get(meta.key)
                         t1 = time.perf_counter()
                         if data_string is not None:
                             client_socket.sendall(ServerMetaMessage(Constants.SERVER_SUCCESS, len(data_string)).serialize())
@@ -56,11 +60,12 @@ class LMCacheServer:
                             client_socket.sendall(ServerMetaMessage(Constants.SERVER_FAIL, 0).serialize())
 
                     case Constants.CLIENT_EXIST:
-                        code = Constants.SERVER_SUCCESS if meta.key in self.data_store else Constants.SERVER_FAIL
+                        #code = Constants.SERVER_SUCCESS if meta.key in self.data_store else Constants.SERVER_FAIL
+                        code = Constants.SERVER_SUCCESS if meta.key in self.data_store.list_keys() else Constants.SERVER_FAIL
                         client_socket.sendall(ServerMetaMessage(code, 0).serialize())
 
                     case Constants.CLIENT_LIST:
-                        keys = list(self.data_store.keys())
+                        keys = list(self.data_store.list_keys())
                         data = "\n".join(keys).encode()
                         client_socket.sendall(ServerMetaMessage(Constants.SERVER_SUCCESS, len(data)).serialize())
                         client_socket.sendall(data)
@@ -80,13 +85,17 @@ class LMCacheServer:
 
 if __name__ == "__main__":
     import os, sys
-    if len(sys.argv) != 3:
-        print(f"Usage: {sys.argv[0]} <host> <port>")
+    if len(sys.argv) not in [3,4]:
+        print(f"Usage: {sys.argv[0]} <host> <port> <storage>(default:cpu)")
         exit(1)
 
     host = sys.argv[1]
     port = int(sys.argv[2])
+    if len(sys.argv) == 4:
+        device = sys.argv[3]
+    else:
+        device = "cpu"
     
-    server = LMCacheServer(host, port)
+    server = LMCacheServer(host, port, device)
     server.run()
 
