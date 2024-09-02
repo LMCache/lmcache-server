@@ -1,9 +1,12 @@
 from typing import Tuple, Optional, Iterator, List
+from safetensors import safe_open
+from safetensors.torch import save_file
 import re
 import io
 import torch
 import redis
 import os
+import pickle
 
 from lmcache_server.storage_backend.abstract_backend import LMSBackendInterface
 from lmcache.logging import init_logger
@@ -143,7 +146,7 @@ class LMSLocalDiskBackend(LMSBackendInterface):
         Returns:
             returns the path name
         """
-        return self.path + key.replace("/","-") + ".pt"
+        return self.path + key.replace("/","-") + ".bin"
         
     
     def put(
@@ -169,7 +172,9 @@ class LMSLocalDiskBackend(LMSBackendInterface):
             logger.warn("Non-blocking is not implemented for local backend")
         self.filenames.add(key)
         logger.info(f"Saving cache to {self._key_to_path(key)}")
-        torch.save(kv_chunk_bytes, self._key_to_path(key))
+        #torch.save(kv_chunk_bytes, self._key_to_path(key))
+        with open(self._key_to_path(key), "wb") as binary_file:
+            binary_file.write(kv_chunk_bytes)
 
 
     @_lmcache_nvtx_annotate
@@ -189,4 +194,7 @@ class LMSLocalDiskBackend(LMSBackendInterface):
         if key not in self.filenames:
             return None
         
-        return torch.load(self._key_to_path(key))
+        with open(self._key_to_path(key), "rb") as binary_file:
+            return binary_file.read()
+        
+        #return torch.load(self._key_to_path(key))
