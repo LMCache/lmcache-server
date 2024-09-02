@@ -92,7 +92,7 @@ class LMSLocalBackend(LMSBackendInterface):
 
 
 # TODO(Jiayi): need to optimize disk loading
-# current impl. with "torch.load/save" might not be efficient
+# current impl. with "naive open read/write" might not be efficient (better than torch.load)
 class LMSLocalDiskBackend(LMSBackendInterface):
     """
     Cache engine for storing the KV cache of the tokens in the local disk.
